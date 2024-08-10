@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <title>Photo & Audio Converter</title>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+        console.log('Service Worker registered with scope:', registration.scope);
+      }).catch(function(error) {
+        console.log('Service Worker registration failed:', error);
+      });
+    }
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding-top: 50px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        img, audio {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 100px;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Photo & Audio Converter</h1>
+        
+        <!-- Photo Upload & Convert -->
+        <input type="file" id="uploadPhoto" accept="image/*">
+        <button onclick="document.getElementById('uploadPhoto').click()">Receive Photo</button>
+        <textarea id="photoString" placeholder="Photo string will appear here..."></textarea>
+        <button onclick="convertToPhoto()">Export Photo</button>
+        <img id="resultImage" src="" alt="">
+        <button onclick="downloadPhoto()">Download Photo</button>
+
+        <!-- Audio Record & Convert -->
+        <button id="recordAudio" onclick="startRecording()">Record Audio</button>
+        <textarea id="audioString" placeholder="Audio string will appear here..."></textarea>
+        <button onclick="convertToAudio()">Export Audio</button>
+        <audio id="resultAudio" controls></audio>
+        <button onclick="downloadAudio()">Download Audio</button>
+    </div>
+
+    <script>
+        // Photo to String and String to Photo
+        const uploadPhoto = document.getElementById('uploadPhoto');
+        const photoString = document.getElementById('photoString');
+        const resultImage = document.getElementById('resultImage');
+
+        uploadPhoto.addEventListener('change', function() {
+            const file = uploadPhoto.files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                photoString.value = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function convertToPhoto() {
+            const dataURL = photoString.value;
+            resultImage.src = dataURL;
+        }
+
+        function downloadPhoto() {
+            const link = document.createElement('a');
+            link.href = photoString.value;
+            link.download = 'downloaded_photo.png'; // ডাউনলোড ফাইলের নাম
+            link.click();
+        }
+
+        // Audio Recording and Conversion
+        let mediaRecorder;
+        let audioChunks = [];
+        const audioString = document.getElementById('audioString');
+        const resultAudio = document.getElementById('resultAudio');
+        const recordAudioButton = document.getElementById('recordAudio');
+
+        function startRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordAudioButton.textContent = 'Record Audio';
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder.start();
+                        recordAudioButton.textContent = 'Stop Recording';
+
+                        mediaRecorder.ondataavailable = event => {
+                            audioChunks.push(event.data);
+                        };
+
+                        mediaRecorder.onstop = () => {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                            audioChunks = [];
+                            const reader = new FileReader();
+                            reader.onloadend = function() {
+                                audioString.value = reader.result;
+                            };
+                            reader.readAsDataURL(audioBlob);
+                        };
+                    });
+            }
+        }
+
+        function convertToAudio() {
+            const dataURL = audioString.value;
+            resultAudio.src = dataURL;
+        }
+
+        function downloadAudio() {
+            const link = document.createElement('a');
+            link.href = audioString.value;
+            link.download = 'downloaded_audio.wav'; // ডাউনলোড ফাইলের নাম
+            link.click();
+        }
+    </script>
+</body>
+</html>
